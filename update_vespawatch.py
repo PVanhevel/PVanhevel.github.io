@@ -31,14 +31,48 @@ ROOT = Path(__file__).resolve().parent
 MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
+SITE_NAV = (
+    '<a href="index.html">Hive weight</a> | '
+    '<a href="asian_hornet_observations.html">Asian Hornet map</a> | '
+    '<a href="analysis_vespawatch.html">VespaWatch analysis</a> | '
+    '<a href="heatmap_vespawatch.html">Flanders heatmap</a>'
+)
+SITE_NAV_CHROME = (
+    '<style>'
+    'html,body{margin:0;background:#fff;color:#696969;'
+    'font-family:"Courier New",monospace;font-size:10px}'
+    '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6}'
+    '.site-nav a{color:#447adb;text-decoration:none}'
+    '.site-nav a:hover{text-decoration:underline}'
+    '</style>'
+    f'<nav class="site-nav">{SITE_NAV}</nav>'
+)
 
+
+def _with_site_nav(html: str, dark: bool = False) -> str:
+    if 'class="site-nav"' in html:
+        return html
+    chrome = (
+        '<style>'
+        '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6;'
+        'font-family:"Courier New",monospace;font-size:10px}'
+        '.site-nav a{color:#58a6ff;text-decoration:none}'
+        '.site-nav a:hover{text-decoration:underline}'
+        '</style>'
+        f'<nav class="site-nav">{SITE_NAV}</nav>'
+        if dark else SITE_NAV_CHROME
+    )
+    if "</body>" in html:
+        return html.replace("</body>", chrome + "</body>", 1)
+    return html + chrome
 
 
 def fetch() -> pd.DataFrame:
     params = {
         "where": (
             "validatie_status_consensus IN ('goedgekeurd', 'onzeker') "
-            "AND nest_type IS NOT NULL"
+            # "AND nest_type IS NOT NULL"
+            # "1=1"
         ),
         "outFields": (
             "OBJECTID,provincie,gemeente,breedtegraad,lengtegraad,"
@@ -99,10 +133,12 @@ def tables(df: pd.DataFrame) -> dict:
     years = range(2017, today.year + 1)
     ytd = ytd.reindex(years, fill_value=0)
     ytd["totaal"] = ytd.sum(axis=1)
+
     per_km2 = ytd.copy()
     for province in PROVINCES:
         per_km2[province] = (per_km2[province] / AREAS_KM2[province]).round(3)
-    per_km2["totaal"] = per_km2[PROVINCES].sum(axis=1).round(3)
+    # per_km2["totaal"] = per_km2[PROVINCES].sum(axis=1).round(3)
+    per_km2["totaal"] = ytd["totaal"] / sum(AREAS_KM2.values())
     return {
         "generated": str(today.date()),
         "as_of": f"1 januari t/m {today.day} {MONTHS[today.month - 1]}",
@@ -114,27 +150,6 @@ def tables(df: pd.DataFrame) -> dict:
             "area_ytd": per_km2.reset_index().to_dict("records"),
         },
     }
-
-
-# def load_municipalities() -> gpd.GeoDataFrame:
-#     if not MUNICIPALITIES_CACHE.exists():
-#         params = {
-#             "where": "1=1",
-#             "outFields": "NAAM,NISCODE",
-#             "returnGeometry": "true",
-#             "outSR": "4326",
-#             "f": "geojson",
-#         }
-#         response = requests.get(MUNICIPALITIES_URL, params=params, timeout=120)
-#         response.raise_for_status()
-#         MUNICIPALITIES_CACHE.parent.mkdir(parents=True, exist_ok=True)
-#         MUNICIPALITIES_CACHE.write_text(response.text, encoding="utf-8")
-
-#     municipalities = gpd.read_file(MUNICIPALITIES_CACHE)
-#     municipalities["NAAM"] = municipalities["NAAM"].astype(str).str.strip()
-#     municipalities["NISCODE"] = municipalities["NISCODE"].astype(str).str.strip()
-#     municipalities["geometry"] = municipalities.geometry.simplify(0.001, preserve_topology=True)
-#     return municipalities
 
 
 def municipality_counts(df: pd.DataFrame, municipalities: gpd.GeoDataFrame) -> pd.Series:
@@ -263,10 +278,13 @@ def write_heatmap(df: pd.DataFrame) -> None:
         height=820,
     )
     fig.update_layout(
+        font=dict(family="Courier New, monospace", size=10, color="#696969"),
+        title_x=0.5,
         margin={"r": 0, "t": 70, "l": 0, "b": 0},
         coloraxis_colorbar={"title": "waarnemingen / km²"},
     )
     fig.write_html(HEATMAP_HTML, include_plotlyjs="cdn")
+    HEATMAP_HTML.write_text(_with_site_nav(HEATMAP_HTML.read_text(encoding="utf-8")), encoding="utf-8")
     print(f"Wrote {HEATMAP_HTML} (max {max_obs_per_km2:.2f} per km²).")
 
 
@@ -285,6 +303,7 @@ def update_analysis_html(payload: dict, path: Path = ANALYSIS_HTML) -> None:
         html,
         count=1,
     )
+    html = _with_site_nav(html, dark=True)
     path.write_text(html, encoding="utf-8")
     print(f"Updated {path}.")
 

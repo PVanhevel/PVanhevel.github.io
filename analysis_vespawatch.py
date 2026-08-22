@@ -38,8 +38,9 @@ def gisservices_inbo() -> pd.DataFrame:
     Pagination makes this work when the service has more than 2,000 records.
     """
     where = (
-        "validatie_status_consensus IN ('goedgekeurd', 'onzeker') "
-        "AND nest_type IS NOT NULL"
+        # "validatie_status_consensus IN ('goedgekeurd', 'onzeker') "
+        # "AND nest_type IS NOT NULL"
+        "1=1"
     )
     fields = [
         "OBJECTID", "breedtegraad", "lengtegraad", "provincie", "gemeente",
