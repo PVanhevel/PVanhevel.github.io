@@ -1,0 +1,40 @@
+name: Update VespaWatch report
+
+on:
+  schedule:
+    # 05:00 UTC = 07:00 in Belgium during summer time.
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: python -m pip install pandas requests geopandas plotly
+
+      - name: Refresh VespaWatch report
+        run: python update_vespawatch.py
+
+      - name: Commit updated report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add analysis_vespawatch.html heatmap_vespawatch.html data/gemeentegrenzen.geojson
+          if git diff --cached --quiet; then
+            echo "No report changes to commit."
+          else
+            git commit -m "Daily update VespaWatch report"
+            git push
+          fi
