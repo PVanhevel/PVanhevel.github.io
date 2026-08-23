@@ -28,6 +28,12 @@ MONTH_NAMES = {
     5: "mei", 6: "juni", 7: "juli", 8: "augustus",
     9: "september", 10: "oktober", 11: "november", 12: "december",
 }
+RESULTS = [
+    'niet_bestrijdbaar',
+    'succesvol_bestreden',
+    'niet_succesvol_bestreden',
+    'ongekend',
+]
 
 
 def gisservices_inbo() -> pd.DataFrame:
@@ -99,6 +105,13 @@ def create_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     # valid = df[df["nest_type"].ne("inactief leeg nest") & df["nest_type"].ne("")].copy()
     valid = df
 
+    by_result = valid.pivot_table(
+        index="year", columns="bestrijding_resultaat", values="OBJECTID", aggfunc="count", fill_value=0
+    ).reindex(columns=RESULTS, fill_value=0).astype(int)
+    by_result["totaal"] = by_result.sum(axis=1)
+    by_result.index.name = "jaar"
+    by_result.columns.name = None
+
     by_month = valid.pivot_table(
         index="year", columns="month", values="OBJECTID", aggfunc="count", fill_value=0
     ).reindex(columns=MONTHS, fill_value=0).rename(columns=MONTH_NAMES).astype(int)
@@ -142,6 +155,7 @@ def create_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     )
 
     return (
+        by_result,
         by_month,
         by_province,
         by_province_till_current_date,
@@ -153,6 +167,7 @@ def main() -> None:
     output_dir = Path(__file__).parent
     df = gisservices_inbo()
     (
+        observations_by_result,
         observations_by_month,
         observations_by_province,
         observations_by_province_till_current_date,
@@ -166,6 +181,8 @@ def main() -> None:
     observations_by_province_per_km2.to_csv(
         output_dir / "observations_by_province_per_km2.csv"
     )
+    print("Observations by result:")
+    print(observations_by_result.to_string())
     print("Observations by month:")
     print(observations_by_month.to_string())
     print("\nObservations by province:")

@@ -27,6 +27,12 @@ MONTHS = [
     "januari", "februari", "maart", "april", "mei", "juni",
     "juli", "augustus", "september", "oktober", "november", "december",
 ]
+RESULTS = [
+    'niet_bestrijdbaar',
+    'succesvol_bestreden',
+    'niet_succesvol_bestreden',
+    'ongekend',
+]
 ROOT = Path(__file__).resolve().parent
 MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
@@ -76,7 +82,7 @@ def fetch() -> pd.DataFrame:
         ),
         "outFields": (
             "OBJECTID,provincie,gemeente,breedtegraad,lengtegraad,"
-            "nest_type,melding_observatie_datum"
+            "nest_type,melding_observatie_datum,bestrijding_resultaat"
         ),
         "returnGeometry": "false",
         "resultRecordCount": 2000,
@@ -106,6 +112,14 @@ def fetch() -> pd.DataFrame:
 
 def tables(df: pd.DataFrame) -> dict:
     df["jaar"], df["maand"] = df["datum"].dt.year, df["datum"].dt.month
+
+    by_result = df.pivot_table(
+        index="jaar", columns="bestrijding_resultaat", values="OBJECTID", aggfunc="count", fill_value=0
+    ).reindex(columns=RESULTS, fill_value=0).astype(int)
+    by_result["totaal"] = by_result.sum(axis=1)
+    by_result.index.name = "jaar"
+    by_result.columns.name = None
+
     by_month = (
         df.pivot_table(index="jaar", columns="maand", values="OBJECTID", aggfunc="count", fill_value=0)
         .reindex(columns=range(1, 13), fill_value=0)
@@ -145,6 +159,7 @@ def tables(df: pd.DataFrame) -> dict:
         "as_of": f"1 januari t/m {today.day} {MONTHS[today.month - 1]}",
         "areas_km2": AREAS_KM2,
         "tables": {
+            "result": by_result.reset_index().to_dict("records"),
             "month": by_month.reset_index().to_dict("records"),
             "province": by_prov.reset_index().to_dict("records"),
             "ytd": ytd.reset_index().to_dict("records"),
@@ -272,7 +287,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
         animation_frame="jaar",                                                                     # Creates the interactive year slider
         title=(
             "VespaWatch waarnemingen per km² per gemeente in Vlaanderen<br>"
-            "<sup>alle waarnemingen (dus incl. onzekere en niet gevalideerde en dubbele waarnemingen, lege nesten, ...</sup>"
+            "<sup>alle waarnemingen (dus incl. de niet gedfeerde, de onzekere, de dubbele, de lege nesten, enz.</sup>"
         ),
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
