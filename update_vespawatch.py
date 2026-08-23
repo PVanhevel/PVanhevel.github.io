@@ -2,9 +2,10 @@
 import json
 import re
 from pathlib import Path
-
+import numpy as np
 import geopandas as gpd
 import pandas as pd
+from sklearn.cluster import DBSCAN
 import plotly.express as px
 import requests
 
@@ -153,6 +154,54 @@ def tables(df: pd.DataFrame) -> dict:
     for province in PROVINCES:
         per_km2[province] = (per_km2[province] / AREAS_KM2[province]).round(3)
     per_km2["totaal"] = ytd["totaal"] / sum(AREAS_KM2.values())
+
+    allowed_types = ["inactief leeg nest", "actief secundair nest"]
+    df_filtered = df[df["nest_type"].isin(allowed_types)].copy()
+    df_filtered["latitude"] = pd.to_numeric(df_filtered["latitude"], errors="coerce")
+    df_filtered["longitude"] = pd.to_numeric(df_filtered["longitude"], errors="coerce")
+    df_clean = df_filtered.dropna(subset=["latitude", "longitude", "datum"]).copy()
+
+    def get_hornet_season(date):
+        if date.month >= 6:
+            return f"{date.year}-{date.year + 1}"
+        else:
+            return f"{date.year - 1}-{date.year}"
+
+    df_clean["season"] = df_clean["datum"].apply(get_hornet_season)
+    earth_radius_meters = 6371000
+    max_distance_meters = 50
+    eps_rad = max_distance_meters / earth_radius_meters
+    clustered_records = []
+    for season_name, df_season in df_clean.groupby("season"):
+        if len(df_season) < 2:
+            continue
+        coords_rad = np.deg2rad(df_season[["latitude", "longitude"]].values)
+        db = DBSCAN(eps=eps_rad, min_samples=2, metric="haversine")
+        cluster_labels = db.fit_predict(coords_rad)
+        df_season_result = df_season.copy()
+        df_season_result["cluster_id"] = cluster_labels
+        df_clusters = df_season_result[df_season_result["cluster_id"] != -1].copy()
+        if not df_clusters.empty:
+            df_clusters["unique_cluster_name"] = (
+                df_clusters["season"]
+                + "_Cluster_"
+                + df_clusters["cluster_id"].astype(str)
+            )
+            clustered_records.append(df_clusters)
+    if clustered_records:
+        df_final_clusters = pd.concat(clustered_records)
+    clusters_stats = (
+        df_final_clusters[df_final_clusters["cluster_grootte"] > 1]
+        .groupby("season")
+        .agg(
+            aantal_clusters=("unique_cluster_name", "nunique"),  # Telt unieke cluster namen
+            gemiddelde_grootte=("cluster_grootte", "mean")       # Berekent het gemiddelde van de grootte
+        )
+        .rename(columns={"aantal_clusters": "aantal 50 m radius clusters groter dan 1", "gemiddelde_grootte": "gemiddelde clustergrootte"})
+        .astype({"aantal 50 m radius clusters groter dan 1": int})
+        .round({"gemiddelde clustergrootte": 1})
+    )
+
     return {
         "generated": str(today.date()),
         "as_of": f"1 januari t/m {today.day} {MONTHS[today.month - 1]}",
@@ -163,6 +212,7 @@ def tables(df: pd.DataFrame) -> dict:
             "province": by_prov.reset_index().to_dict("records"),
             "ytd": ytd.reset_index().to_dict("records"),
             "area_ytd": per_km2.reset_index().to_dict("records"),
+            "clusters_stats": clusters_stats.reset_index().to_dict("records"),
         },
     }
 
