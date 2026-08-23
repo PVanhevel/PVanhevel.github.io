@@ -39,9 +39,9 @@ HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
 SITE_NAV = (
     '<a href="index.html">Hive weight</a> | '
-    '<a href="asian_hornet_observations.html">Asian Hornet map</a> | '
-    '<a href="analysis_vespawatch.html">VespaWatch analysis</a> | '
-    '<a href="heatmap_vespawatch.html">Flanders heatmap</a>'
+    '<a href="asian_hornet_observations.html">AH observations near Hofstade</a> | '
+    '<a href="analysis_vespawatch.html">AH observations tables</a> | '
+    '<a href="heatmap_vespawatch.html">AH observations heatmap</a>'
 )
 SITE_NAV_CHROME = (
     '<style>'
