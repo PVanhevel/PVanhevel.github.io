@@ -152,7 +152,6 @@ def tables(df: pd.DataFrame) -> dict:
     per_km2 = ytd.copy()
     for province in PROVINCES:
         per_km2[province] = (per_km2[province] / AREAS_KM2[province]).round(3)
-    # per_km2["totaal"] = per_km2[PROVINCES].sum(axis=1).round(3)
     per_km2["totaal"] = ytd["totaal"] / sum(AREAS_KM2.values())
     return {
         "generated": str(today.date()),
@@ -286,7 +285,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
         },
         animation_frame="jaar",                                                                     # Creates the interactive year slider
         title=(
-            "VespaWatch waarnemingen per km² per gemeente in Vlaanderen<br>"
+            "Waarnemingen van AH nesten per km² per gemeente in Vlaanderen<br>"
             "<sup>alle waarnemingen (dus incl. de niet gedfeerde, de onzekere, de dubbele, de lege nesten, enz.</sup>"
         ),
         center={"lat": 51.0, "lon": 4.5},
