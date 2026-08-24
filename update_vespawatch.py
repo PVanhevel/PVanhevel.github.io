@@ -7,6 +7,7 @@ import geopandas as gpd
 import pandas as pd
 from sklearn.cluster import DBSCAN
 import plotly.express as px
+px.set_mapbox_access_token("pk.eyJ1IjoicHZhbmhldmVsIiwiYSI6ImNqZnZnanZjcjR3ZnEycXFmaTFycmx4MzAifQ.0jurH4Sa_VFi8RrbTL_bGA")
 import requests
 
 QUERY_URL = (
@@ -37,6 +38,7 @@ RESULTS = [
 ROOT = Path(__file__).resolve().parent
 MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
+HEATMAP_TEMPLATE_HTML = ROOT / "heatmap_template.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
 SITE_NAV = (
     '<a href="index.html">Hive weight</a> | '
@@ -356,7 +358,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
         ),
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
-        height=820,
+        # height=820,
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
@@ -364,8 +366,16 @@ def write_heatmap(df: pd.DataFrame) -> None:
         margin={"r": 0, "t": 70, "l": 0, "b": 0},
         coloraxis_colorbar={"title": "waarnemingen / km²"},
     )
-    fig.write_html(HEATMAP_HTML, include_plotlyjs="cdn")
-    HEATMAP_HTML.write_text(_with_site_nav(HEATMAP_HTML.read_text(encoding="utf-8")), encoding="utf-8")
+    # fig.write_html(HEATMAP_HTML, include_plotlyjs="cdn")
+    # HEATMAP_HTML.write_text(_with_site_nav(HEATMAP_HTML.read_text(encoding="utf-8")), encoding="utf-8")
+
+    # plotly_div = fig.to_html(include_plotlyjs=False, full_html=False)
+    plotly_div = fig.to_html(include_plotlyjs="cdn", full_html=False)
+    with open(HEATMAP_TEMPLATE_HTML, "r", encoding="utf-8") as f:
+        html_template = f.read()
+    final_html = html_template.replace("{content}", plotly_div)
+    with open(HEATMAP_HTML, "w", encoding="utf-8") as f:
+        f.write(final_html)
     print(f"Wrote {HEATMAP_HTML} (max {max_obs_per_km2:.2f} per km²).")
 
 

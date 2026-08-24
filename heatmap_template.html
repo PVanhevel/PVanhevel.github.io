@@ -42,19 +42,18 @@
             border-bottom: 2px solid #3498db; padding-bottom: 10px; flex-shrink: 0;
         }
 
-        /* Plotly specific overrides to ensure full-screen height */
+        /* BULLETPROOF Plotly overrides */
         .container > div { 
-            flex-grow: 1; 
+            flex: 1 1 0% !important;
             display: flex; 
             flex-direction: column; 
             min-height: 0; 
-            height: 100%; 
         }
         .plotly-graph-div { 
-            flex-grow: 1; 
+            flex: 1 1 0% !important;
             width: 100% !important; 
             height: 100% !important; 
-            min-height: 600px; /* SAFEGUARD: Prevents browser flexbox collapse to 0px */
+            min-height: 600px !important; /* Forces visibility even if flexbox struggles */
         }
 
         .footer { text-align: center; padding: 15px; color: #7f8c8d; font-size: 0.85rem; flex-shrink: 0; background-color: #f4f7f6; }
