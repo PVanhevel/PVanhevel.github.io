@@ -22,7 +22,7 @@ jobs:
           python-version: "3.x"
 
       - name: Install dependencies
-        run: python -m pip install pandas requests geopandas plotly sklearn
+        run: python -m pip install pandas requests geopandas plotly scikit-learn
 
       - name: Refresh VespaWatch report
         run: python update_vespawatch.py
