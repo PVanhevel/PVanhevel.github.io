@@ -212,7 +212,7 @@ def tables(df: pd.DataFrame) -> dict:
         .astype({"aantal 50 m radius clusters groter dan 1": int})
         .round({"gemiddelde clustergrootte": 1})
     )
-    clusters_stats.index.name = "seizoen"
+    clusters_stats.index.name = "jaar"
     clusters_stats.columns.name = None
 
     return {
@@ -225,7 +225,7 @@ def tables(df: pd.DataFrame) -> dict:
             "province": by_prov.reset_index().to_dict("records"),
             "ytd": ytd.reset_index().to_dict("records"),
             "area_ytd": per_km2.reset_index().to_dict("records"),
-            "clusters_stats": clusters_stats.to_dict("records"),
+            "clusters_stats": clusters_stats.reset_index().to_dict("records"),
         },
     }
 
