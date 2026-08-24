@@ -157,8 +157,8 @@ def tables(df: pd.DataFrame) -> dict:
 
     allowed_types = ["inactief leeg nest", "actief secundair nest"]
     df_filtered = df[df["nest_type"].isin(allowed_types)].copy()
-    df_filtered["latitude"] = pd.to_numeric(df_filtered["latitude"], errors="coerce")
-    df_filtered["longitude"] = pd.to_numeric(df_filtered["longitude"], errors="coerce")
+    df_filtered["latitude"] = pd.to_numeric(df_filtered["breedtegraad"], errors="coerce")
+    df_filtered["longitude"] = pd.to_numeric(df_filtered["lengtegraad"], errors="coerce")
     df_clean = df_filtered.dropna(subset=["latitude", "longitude", "datum"]).copy()
 
     def get_hornet_season(date):
@@ -190,6 +190,17 @@ def tables(df: pd.DataFrame) -> dict:
             clustered_records.append(df_clusters)
     if clustered_records:
         df_final_clusters = pd.concat(clustered_records)
+        cluster_counts = (
+            df_final_clusters.groupby("unique_cluster_name")
+            .size()
+            .reset_index(name="cluster_grootte")
+        )
+        df_final_clusters = df_final_clusters.merge(
+            cluster_counts, on="unique_cluster_name"
+        )
+        df_final_clusters = df_final_clusters.sort_values(
+            ["season", "unique_cluster_name"]
+        )
     clusters_stats = (
         df_final_clusters[df_final_clusters["cluster_grootte"] > 1]
         .groupby("season")
@@ -201,6 +212,8 @@ def tables(df: pd.DataFrame) -> dict:
         .astype({"aantal 50 m radius clusters groter dan 1": int})
         .round({"gemiddelde clustergrootte": 1})
     )
+    clusters_stats.index.name = "seizoen"
+    clusters_stats.columns.name = None
 
     return {
         "generated": str(today.date()),
@@ -212,7 +225,7 @@ def tables(df: pd.DataFrame) -> dict:
             "province": by_prov.reset_index().to_dict("records"),
             "ytd": ytd.reset_index().to_dict("records"),
             "area_ytd": per_km2.reset_index().to_dict("records"),
-            "clusters_stats": clusters_stats.reset_index().to_dict("records"),
+            "clusters_stats": clusters_stats.to_dict("records"),
         },
     }
 
