@@ -201,6 +201,7 @@ def tables(df: pd.DataFrame) -> dict:
         df_final_clusters = df_final_clusters.sort_values(
             ["season", "unique_cluster_name"]
         )
+    obs_per_season = df_clean.groupby("season").size().rename("aantal waarnemingen")
     clusters_stats = (
         df_final_clusters[df_final_clusters["cluster_grootte"] > 1]
         .groupby("season")
@@ -212,6 +213,8 @@ def tables(df: pd.DataFrame) -> dict:
         .astype({"aantal 50 m radius clusters groter dan 1": int})
         .round({"gemiddelde clustergrootte": 1})
     )
+    clusters_stats = clusters_stats.join(obs_per_season).fillna(0)
+    clusters_stats["aantal waarnemingen"] = clusters_stats["aantal waarnemingen"].astype(int)
     clusters_stats.index.name = "jaar"
     clusters_stats.columns.name = None
 
