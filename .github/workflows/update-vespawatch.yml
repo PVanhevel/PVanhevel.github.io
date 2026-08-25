@@ -1,4 +1,4 @@
-name: Update VespaWatch report
+keepersname: Update VespaWatch report
 
 on:
   schedule:
@@ -31,7 +31,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add analysis_vespawatch.html heatmap_vespawatch.html data/gemeentegrenzen.geojson
+          git add analysis_vespawatch.html heatmap_vespawatch.html heatmap_beekeepers.html data/gemeentegrenzen.geojson
           if git diff --cached --quiet; then
             echo "No report changes to commit."
           else
