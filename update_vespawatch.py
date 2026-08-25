@@ -40,11 +40,14 @@ MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
 HEATMAP_TEMPLATE_HTML = ROOT / "heatmap_template.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
+HEATMAP1_HTML = ROOT / "heatmap_beekeepers.html"
+HEATMAP1_TEMPLATE_HTML = ROOT / "heatmap1_template.html"
 SITE_NAV = (
     '<a href="index.html">Hive weight</a> | '
     '<a href="asian_hornet_observations.html">AH observations near Hofstade</a> | '
     '<a href="analysis_vespawatch.html">AH observations tables</a> | '
-    '<a href="heatmap_vespawatch.html">AH observations heatmap</a>'
+    '<a href="heatmap_vespawatch.html">AH observations heatmap</a> | '
+    '<a href="heatmap_beekeepers.html">Beekeepers heatmap</a>'
 )
 SITE_NAV_CHROME = (
     '<style>'
@@ -379,6 +382,95 @@ def write_heatmap(df: pd.DataFrame) -> None:
     print(f"Wrote {HEATMAP_HTML} (max {max_obs_per_km2:.2f} per km²).")
 
 
+def beekeepers_heatmap() -> None:
+    municipalities = load_municipalities()
+    geojson = json.loads(municipalities.to_json())
+    df_plot = pd.read_csv("inter_actieve_actoren_NL.csv", encoding="ISO-8859-1")
+    df_plot = df_plot[df_plot["PAP Omschrijving"] == "Imker - houden bijen"]
+    cols = [
+        'OP Uniek Nr Id ',
+        'LNO Uniek Nr ',
+        # 'PAP Id',
+        # 'PAP Omschrijving',
+        # 'PAP ACT Code',
+        # 'PAP ACT Omschrijving',
+        # 'PAP PLA Code',
+        # 'PAP PLA Omschrijving',
+        # 'PAP PRD Code',
+        # 'PAP PRD Omschrijving',
+        # 'TYP ERK Erkenning code',
+        # 'TYP ERK omschrijving',
+        # 'TYP ERK Erkenning vorm Omschrijving',
+        # 'TYP ERK Erkenning Vorm Code',
+        'PC Postcode ',
+        'GEM Naam ',
+        'PR Naam ',
+        'ERK Nummer ',
+        'ERK Begindatum ',
+        'Datum vandaag',
+    ]
+    df_plot = df_plot[cols]
+    df_plot = df_plot.rename(columns={"GEM Naam ": "NAAM"})
+    df_plot = df_plot[df_plot["NAAM"].isin(municipalities["NAAM"])]
+    counts = (
+        df_plot["NAAM"]
+        .astype(str)
+        .str.strip()
+        .replace("", pd.NA)
+        .dropna()
+        .value_counts()
+    )
+    plot_data = municipalities[["NAAM", "NISCODE", "area_km2", "geometry"]].copy()
+    plot_data["beekeepers"] = plot_data["NAAM"].map(counts).fillna(0)
+    plot_data["beeks_per_km2"] = plot_data["beekeepers"] / plot_data["area_km2"]
+    plot_data["beeks_per_km2"] = plot_data["beeks_per_km2"].round(3)
+    plot_data["area_km2"] = plot_data["area_km2"].round(3)
+    max_beeks_per_km2 = plot_data["beeks_per_km2"].max()
+    color_max = max(1.0, round(max_beeks_per_km2 * 1.2, 1))
+    # color_max = 1
+
+    fig = px.choropleth_map(
+        plot_data,
+        geojson=geojson,
+        locations="NISCODE",
+        featureidkey="properties.NISCODE",
+        color="beeks_per_km2",
+        hover_name="NAAM",
+        hover_data={
+            "beeks_per_km2": True,
+            "beekeepers": True,
+            "area_km2": True,
+            "NISCODE": False
+        },
+        color_continuous_scale="YlOrRd",
+        range_color=(1, color_max),
+        labels={
+            "beeks_per_km2": "imkers per km²",
+            "beekeepers": "aantal imkers",
+            "area_km2": "oppervlakte (km²)"
+        },
+        title=(
+            "Aantal imkers per km² per gemeente in Vlaanderen<br>"
+            "<sup>Bron: FAVV inter_actieve_actoren_NL.csv</sup>"
+        ),
+        center={"lat": 51.0, "lon": 4.5},
+        zoom=8,
+        # height=820,
+    )
+    fig.update_layout(
+        font=dict(family="Courier New, monospace", size=10, color="#696969"),
+        title_x=0.5,
+        margin={"r": 0, "t": 70, "l": 0, "b": 0},
+        coloraxis_colorbar={"title": "imkers / km²"},
+    )
+    plotly_div = fig.to_html(include_plotlyjs="cdn", full_html=False)
+    with open(HEATMAP1_TEMPLATE_HTML, "r", encoding="utf-8") as f:
+        html_template = f.read()
+    final_html = html_template.replace("{content}", plotly_div)
+    with open(HEATMAP1_HTML, "w", encoding="utf-8") as f:
+        f.write(final_html)
+
+
 def update_analysis_html(payload: dict, path: Path = ANALYSIS_HTML) -> None:
     if not path.exists():
         return
@@ -403,6 +495,7 @@ def main() -> None:
     df = fetch()
     write_heatmap(df)
     update_analysis_html(tables(df))
+    beekeepers_heatmap()
 
 
 if __name__ == "__main__":
