@@ -2,10 +2,12 @@
 import json
 import re
 from pathlib import Path
-
+import numpy as np
 import geopandas as gpd
 import pandas as pd
+from sklearn.cluster import DBSCAN
 import plotly.express as px
+px.set_mapbox_access_token("pk.eyJ1IjoicHZhbmhldmVsIiwiYSI6ImNqZnZnanZjcjR3ZnEycXFmaTFycmx4MzAifQ.0jurH4Sa_VFi8RrbTL_bGA")
 import requests
 
 QUERY_URL = (
@@ -27,15 +29,22 @@ MONTHS = [
     "januari", "februari", "maart", "april", "mei", "juni",
     "juli", "augustus", "september", "oktober", "november", "december",
 ]
+RESULTS = [
+    'niet_bestrijdbaar',
+    'succesvol_bestreden',
+    'niet_succesvol_bestreden',
+    'ongekend',
+]
 ROOT = Path(__file__).resolve().parent
 MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
+HEATMAP_TEMPLATE_HTML = ROOT / "heatmap_template.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
 SITE_NAV = (
     '<a href="index.html">Hive weight</a> | '
-    '<a href="asian_hornet_observations.html">Asian Hornet map</a> | '
-    '<a href="analysis_vespawatch.html">VespaWatch analysis</a> | '
-    '<a href="heatmap_vespawatch.html">Flanders heatmap</a>'
+    '<a href="asian_hornet_observations.html">AH observations near Hofstade</a> | '
+    '<a href="analysis_vespawatch.html">AH observations tables</a> | '
+    '<a href="heatmap_vespawatch.html">AH observations heatmap</a>'
 )
 SITE_NAV_CHROME = (
     '<style>'
@@ -49,22 +58,22 @@ SITE_NAV_CHROME = (
 )
 
 
-def _with_site_nav(html: str, dark: bool = False) -> str:
-    if 'class="site-nav"' in html:
-        return html
-    chrome = (
-        '<style>'
-        '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6;'
-        'font-family:"Courier New",monospace;font-size:10px}'
-        '.site-nav a{color:#58a6ff;text-decoration:none}'
-        '.site-nav a:hover{text-decoration:underline}'
-        '</style>'
-        f'<nav class="site-nav">{SITE_NAV}</nav>'
-        if dark else SITE_NAV_CHROME
-    )
-    if "</body>" in html:
-        return html.replace("</body>", chrome + "</body>", 1)
-    return html + chrome
+# def _with_site_nav(html: str, dark: bool = False) -> str:
+#     if 'class="site-nav"' in html:
+#         return html
+#     chrome = (
+#         '<style>'
+#         '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6;'
+#         'font-family:"Courier New",monospace;font-size:10px}'
+#         '.site-nav a{color:#58a6ff;text-decoration:none}'
+#         '.site-nav a:hover{text-decoration:underline}'
+#         '</style>'
+#         f'<nav class="site-nav">{SITE_NAV}</nav>'
+#         if dark else SITE_NAV_CHROME
+#     )
+#     if "</body>" in html:
+#         return html.replace("</body>", chrome + "</body>", 1)
+#     return html + chrome
 
 
 def fetch() -> pd.DataFrame:
@@ -76,7 +85,7 @@ def fetch() -> pd.DataFrame:
         ),
         "outFields": (
             "OBJECTID,provincie,gemeente,breedtegraad,lengtegraad,"
-            "nest_type,melding_observatie_datum"
+            "nest_type,melding_observatie_datum,bestrijding_resultaat"
         ),
         "returnGeometry": "false",
         "resultRecordCount": 2000,
@@ -106,6 +115,14 @@ def fetch() -> pd.DataFrame:
 
 def tables(df: pd.DataFrame) -> dict:
     df["jaar"], df["maand"] = df["datum"].dt.year, df["datum"].dt.month
+
+    by_result = df.pivot_table(
+        index="jaar", columns="bestrijding_resultaat", values="OBJECTID", aggfunc="count", fill_value=0
+    ).reindex(columns=RESULTS, fill_value=0).astype(int)
+    by_result["totaal"] = by_result.sum(axis=1)
+    by_result.index.name = "jaar"
+    by_result.columns.name = None
+
     by_month = (
         df.pivot_table(index="jaar", columns="maand", values="OBJECTID", aggfunc="count", fill_value=0)
         .reindex(columns=range(1, 13), fill_value=0)
@@ -138,17 +155,82 @@ def tables(df: pd.DataFrame) -> dict:
     per_km2 = ytd.copy()
     for province in PROVINCES:
         per_km2[province] = (per_km2[province] / AREAS_KM2[province]).round(3)
-    # per_km2["totaal"] = per_km2[PROVINCES].sum(axis=1).round(3)
     per_km2["totaal"] = ytd["totaal"] / sum(AREAS_KM2.values())
+
+    allowed_types = ["inactief leeg nest", "actief secundair nest"]
+    df_filtered = df[df["nest_type"].isin(allowed_types)].copy()
+    df_filtered["latitude"] = pd.to_numeric(df_filtered["breedtegraad"], errors="coerce")
+    df_filtered["longitude"] = pd.to_numeric(df_filtered["lengtegraad"], errors="coerce")
+    df_clean = df_filtered.dropna(subset=["latitude", "longitude", "datum"]).copy()
+
+    def get_hornet_season(date):
+        if date.month >= 6:
+            return f"{date.year}-{date.year + 1}"
+        else:
+            return f"{date.year - 1}-{date.year}"
+
+    df_clean["season"] = df_clean["datum"].apply(get_hornet_season)
+    earth_radius_meters = 6371000
+    max_distance_meters = 50
+    eps_rad = max_distance_meters / earth_radius_meters
+    clustered_records = []
+    for season_name, df_season in df_clean.groupby("season"):
+        if len(df_season) < 2:
+            continue
+        coords_rad = np.deg2rad(df_season[["latitude", "longitude"]].values)
+        db = DBSCAN(eps=eps_rad, min_samples=2, metric="haversine")
+        cluster_labels = db.fit_predict(coords_rad)
+        df_season_result = df_season.copy()
+        df_season_result["cluster_id"] = cluster_labels
+        df_clusters = df_season_result[df_season_result["cluster_id"] != -1].copy()
+        if not df_clusters.empty:
+            df_clusters["unique_cluster_name"] = (
+                df_clusters["season"]
+                + "_Cluster_"
+                + df_clusters["cluster_id"].astype(str)
+            )
+            clustered_records.append(df_clusters)
+    if clustered_records:
+        df_final_clusters = pd.concat(clustered_records)
+        cluster_counts = (
+            df_final_clusters.groupby("unique_cluster_name")
+            .size()
+            .reset_index(name="cluster_grootte")
+        )
+        df_final_clusters = df_final_clusters.merge(
+            cluster_counts, on="unique_cluster_name"
+        )
+        df_final_clusters = df_final_clusters.sort_values(
+            ["season", "unique_cluster_name"]
+        )
+    obs_per_season = df_clean.groupby("season").size().rename("aantal waarnemingen")
+    clusters_stats = (
+        df_final_clusters[df_final_clusters["cluster_grootte"] > 1]
+        .groupby("season")
+        .agg(
+            aantal_clusters=("unique_cluster_name", "nunique"),  # Telt unieke cluster namen
+            gemiddelde_grootte=("cluster_grootte", "mean")       # Berekent het gemiddelde van de grootte
+        )
+        .rename(columns={"aantal_clusters": "aantal 50 m radius clusters groter dan 1", "gemiddelde_grootte": "gemiddelde clustergrootte"})
+        .astype({"aantal 50 m radius clusters groter dan 1": int})
+        .round({"gemiddelde clustergrootte": 1})
+    )
+    clusters_stats = clusters_stats.join(obs_per_season).fillna(0)
+    clusters_stats["aantal waarnemingen"] = clusters_stats["aantal waarnemingen"].astype(int)
+    clusters_stats.index.name = "jaar"
+    clusters_stats.columns.name = None
+
     return {
         "generated": str(today.date()),
         "as_of": f"1 januari t/m {today.day} {MONTHS[today.month - 1]}",
         "areas_km2": AREAS_KM2,
         "tables": {
+            "result": by_result.reset_index().to_dict("records"),
             "month": by_month.reset_index().to_dict("records"),
             "province": by_prov.reset_index().to_dict("records"),
             "ytd": ytd.reset_index().to_dict("records"),
             "area_ytd": per_km2.reset_index().to_dict("records"),
+            "clusters_stats": clusters_stats.reset_index().to_dict("records"),
         },
     }
 
@@ -271,12 +353,12 @@ def write_heatmap(df: pd.DataFrame) -> None:
         },
         animation_frame="jaar",                                                                     # Creates the interactive year slider
         title=(
-            "VespaWatch waarnemingen per km² per gemeente in Vlaanderen<br>"
-            "<sup>alle waarnemingen (dus incl. onzekere en niet gevalideerde en dubbele waarnemingen, lege nesten, ...</sup>"
+            "Waarnemingen van AH nesten per km² per gemeente in Vlaanderen<br>"
+            "<sup>alle waarnemingen (dus incl. de niet gedfeerde, de onzekere, de dubbele, de lege nesten, enz.</sup>"
         ),
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
-        height=820,
+        # height=820,
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
@@ -284,8 +366,16 @@ def write_heatmap(df: pd.DataFrame) -> None:
         margin={"r": 0, "t": 70, "l": 0, "b": 0},
         coloraxis_colorbar={"title": "waarnemingen / km²"},
     )
-    fig.write_html(HEATMAP_HTML, include_plotlyjs="cdn")
-    HEATMAP_HTML.write_text(_with_site_nav(HEATMAP_HTML.read_text(encoding="utf-8")), encoding="utf-8")
+    # fig.write_html(HEATMAP_HTML, include_plotlyjs="cdn")
+    # HEATMAP_HTML.write_text(_with_site_nav(HEATMAP_HTML.read_text(encoding="utf-8")), encoding="utf-8")
+
+    # plotly_div = fig.to_html(include_plotlyjs=False, full_html=False)
+    plotly_div = fig.to_html(include_plotlyjs="cdn", full_html=False)
+    with open(HEATMAP_TEMPLATE_HTML, "r", encoding="utf-8") as f:
+        html_template = f.read()
+    final_html = html_template.replace("{content}", plotly_div)
+    with open(HEATMAP_HTML, "w", encoding="utf-8") as f:
+        f.write(final_html)
     print(f"Wrote {HEATMAP_HTML} (max {max_obs_per_km2:.2f} per km²).")
 
 
@@ -304,7 +394,7 @@ def update_analysis_html(payload: dict, path: Path = ANALYSIS_HTML) -> None:
         html,
         count=1,
     )
-    html = _with_site_nav(html, dark=True)
+    # html = _with_site_nav(html, dark=True)
     path.write_text(html, encoding="utf-8")
     print(f"Updated {path}.")
 
