@@ -1,4 +1,4 @@
-keepersname: Update VespaWatch report
+name: Update VespaWatch report
 
 on:
   schedule:
