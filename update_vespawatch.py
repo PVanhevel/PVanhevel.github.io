@@ -427,7 +427,6 @@ def beekeepers_heatmap() -> None:
     plot_data["area_km2"] = plot_data["area_km2"].round(3)
     max_beeks_per_km2 = plot_data["beeks_per_km2"].max()
     color_max = max(1.0, round(max_beeks_per_km2 * 1.2, 1))
-    # color_max = 1
 
     fig = px.choropleth_map(
         plot_data,
@@ -443,7 +442,7 @@ def beekeepers_heatmap() -> None:
             "NISCODE": False
         },
         color_continuous_scale="YlOrRd",
-        range_color=(1, color_max),
+        range_color=(0, color_max),
         labels={
             "beeks_per_km2": "imkers per km²",
             "beekeepers": "aantal imkers",
