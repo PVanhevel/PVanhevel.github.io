@@ -6,17 +6,19 @@ import numpy as np
 import geopandas as gpd
 import pandas as pd
 from sklearn.cluster import DBSCAN
+import requests
 import plotly.express as px
 px.set_mapbox_access_token("pk.eyJ1IjoicHZhbmhldmVsIiwiYSI6ImNqZnZnanZjcjR3ZnEycXFmaTFycmx4MzAifQ.0jurH4Sa_VFi8RrbTL_bGA")
-import requests
 
 QUERY_URL = (
     "https://gisservices.inbo.be/arcgis/rest/services/"
     "VespaWatch/VespaWatch_view/FeatureServer/0/query"
 )
-MUNICIPALITIES_URL = (
-    "https://geodata.antwerpen.be/arcgis/rest/services/P_Publiek/P_basemap/MapServer/8/query"
-)
+# MUNICIPALITIES_URL = (                                                                              # does not include Antwerp!
+#     "https://geodata.antwerpen.be/arcgis/rest/services/P_Publiek/P_basemap/MapServer/8/query"
+# )
+MUNICIPALITIES_URL = ("https://geo.api.vlaanderen.be/VRBG/ogc/features/v1/collections/Refgem/items")
+
 PROVINCES = ["Antwerpen", "Limburg", "Oost-Vlaanderen", "Vlaams-Brabant", "West-Vlaanderen"]
 AREAS_KM2 = {
     "Antwerpen": 2867,
@@ -36,7 +38,8 @@ RESULTS = [
     'ongekend',
 ]
 ROOT = Path(__file__).resolve().parent
-MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
+# MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
+MUNICIPALITIES_CACHE = ROOT / "data" / "belgische_gemeenten_vlaanderen.geojson"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
 HEATMAP_TEMPLATE_HTML = ROOT / "heatmap_template.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
@@ -272,29 +275,84 @@ def municipality_counts(df: pd.DataFrame, municipalities: gpd.GeoDataFrame) -> p
     return pd.concat([matched, spatial_counts]).groupby(level=0).sum()
 
 
+# def load_municipalities() -> gpd.GeoDataFrame:
+#     if not MUNICIPALITIES_CACHE.exists():
+#         params = {
+#             "where": "1=1",
+#             "outFields": "NAAM,NISCODE",
+#             "returnGeometry": "true",
+#             "outSR": "4326",
+#             "f": "geojson",
+#         }
+#         response = requests.get(MUNICIPALITIES_URL, params=params, timeout=120)
+#         response.raise_for_status()
+#         MUNICIPALITIES_CACHE.parent.mkdir(parents=True, exist_ok=True)
+#         MUNICIPALITIES_CACHE.write_text(response.text, encoding="utf-8")
+
+#     municipalities = gpd.read_file(MUNICIPALITIES_CACHE)
+#     municipalities["NAAM"] = municipalities["NAAM"].astype(str).str.strip()
+#     municipalities["NISCODE"] = municipalities["NISCODE"].astype(str).str.strip()
+
+#     # Reproject to Belgian Lambert 72 (EPSG:31370) for accurate area calculation
+#     municipalities_proj = municipalities.to_crs("EPSG:31370")
+#     municipalities["area_km2"] = municipalities_proj.geometry.area / 1_000_000
+
+#     municipalities["geometry"] = municipalities.geometry.simplify(0.001, preserve_topology=True)
+#     return municipalities
+
 def load_municipalities() -> gpd.GeoDataFrame:
-    if not MUNICIPALITIES_CACHE.exists():
+    # Forceer herdownload als het bestand corrupt is of HTML-tags bevat van eerdere pogingen
+    is_corrupted = False
+    if MUNICIPALITIES_CACHE.exists():
+        with open(MUNICIPALITIES_CACHE, "r", encoding="utf-8") as f:
+            first_line = f.readline()
+            if "<!DOCTYPE html>" in first_line or "<html" in first_line:
+                is_corrupted = True
+
+    if not MUNICIPALITIES_CACHE.exists() or is_corrupted:
+        # Vraag direct om GeoJSON-formaat en zet de limiet hoog genoeg (Vlaanderen heeft ~280+ gemeenten)
         params = {
-            "where": "1=1",
-            "outFields": "NAAM,NISCODE",
-            "returnGeometry": "true",
-            "outSR": "4326",
-            "f": "geojson",
+            "f": "application/geo+json",
+            "limit": "500",
         }
         response = requests.get(MUNICIPALITIES_URL, params=params, timeout=120)
         response.raise_for_status()
+
+        # Extra veiligheidscontrole op Content-Type
+        if "html" in response.headers.get("Content-Type", "").lower():
+            raise ValueError(
+                "De server gaf onverwacht een HTML-pagina terug in plaats van GeoJSON."
+            )
+
         MUNICIPALITIES_CACHE.parent.mkdir(parents=True, exist_ok=True)
         MUNICIPALITIES_CACHE.write_text(response.text, encoding="utf-8")
 
+    # Geopandas leest het schone GeoJSON-bestand in
     municipalities = gpd.read_file(MUNICIPALITIES_CACHE)
-    municipalities["NAAM"] = municipalities["NAAM"].astype(str).str.strip()
-    municipalities["NISCODE"] = municipalities["NISCODE"].astype(str).str.strip()
 
-    # Reproject to Belgian Lambert 72 (EPSG:31370) for accurate area calculation
+    # Kolomnamen standaardiseren naar hoofdletters voor compatibiliteit met de rest van je code
+    if "NAAM" not in municipalities.columns and "naam" in municipalities.columns:
+        municipalities = municipalities.rename(columns={"naam": "NAAM"})
+    if (
+        "NISCODE" not in municipalities.columns
+        and "niscode" in municipalities.columns
+    ):
+        municipalities = municipalities.rename(columns={"niscode": "NISCODE"})
+
+    # Data opschonen
+    municipalities["NAAM"] = municipalities["NAAM"].astype(str).str.strip()
+    municipalities["NISCODE"] = (
+        municipalities["NISCODE"].astype(str).str.strip()
+    )
+
+    # Projecteer naar Lambert 72 (EPSG:31370) voor een nauwkeurige oppervlakteberekening
     municipalities_proj = municipalities.to_crs("EPSG:31370")
     municipalities["area_km2"] = municipalities_proj.geometry.area / 1_000_000
 
-    municipalities["geometry"] = municipalities.geometry.simplify(0.001, preserve_topology=True)
+    # Geometrie vereenvoudigen voor soepele rendering in de VespaWatch animatie/slider
+    municipalities["geometry"] = municipalities.geometry.simplify(
+        0.001, preserve_topology=True
+    )
     return municipalities
 
 
@@ -304,6 +362,11 @@ def write_heatmap(df: pd.DataFrame) -> None:
 
     # Load municipalities and calculate area ONCE (Optimization)
     municipalities = load_municipalities()
+    # Selecteer alle kolommen die een datum/tijd bevatten en zet ze om naar tekst (string)
+    for col in municipalities.select_dtypes(include=["datetime", "datetimetz"]).columns:
+        municipalities[col] = municipalities[col].astype(str)
+
+    # Nu werkt het omzetten naar JSON zonder foutmeldingen
     geojson = json.loads(municipalities.to_json())
 
     # Prepare dataframe with year column for the animation slider
