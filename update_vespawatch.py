@@ -429,6 +429,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
         # height=820,
+        mapbox_style="carto-positron",                                                              # REQUIRED in Plotly 6.x
     )
     fig.update_layout(
         mapbox={
@@ -533,6 +534,7 @@ def beekeepers_heatmap() -> None:
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
         # height=820,
+        mapbox_style="carto-positron",                                                              # REQUIRED in Plotly 6.x
     )
     fig.update_layout(
         mapbox={
