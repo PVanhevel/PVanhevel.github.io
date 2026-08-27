@@ -401,7 +401,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
     # color_max = max(1.0, round(max_obs_per_km2 * 1.2, 1))
     color_max = 18
 
-    fig = px.choropleth_map(
+    fig = px.choropleth_mapbox(
         plot_data,
         geojson=geojson,
         locations="NISCODE",
@@ -429,7 +429,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
         # height=820,
-        mapbox_style="carto-positron",                                                              # REQUIRED in Plotly 6.x
+        mapbox_style="carto-positron"
     )
     fig.update_layout(
         mapbox=dict(
@@ -507,7 +507,7 @@ def beekeepers_heatmap() -> None:
     max_beeks_per_km2 = plot_data["beeks_per_km2"].max()
     color_max = max(1.0, round(max_beeks_per_km2 * 1.2, 1))
 
-    fig = px.choropleth_map(
+    fig = px.choropleth_mapbox(
         plot_data,
         geojson=geojson,
         locations="NISCODE",
@@ -534,7 +534,7 @@ def beekeepers_heatmap() -> None:
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
         # height=820,
-        mapbox_style="carto-positron",                                                              # REQUIRED in Plotly 6.x
+        mapbox_style="carto-positron"
     )
     fig.update_layout(
         mapbox=dict(
