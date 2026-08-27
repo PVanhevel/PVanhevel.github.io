@@ -427,7 +427,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
             "<sup>alle waarnemingen (dus incl. de niet gedfeerde, de onzekere, de dubbele, de lege nesten, enz.</sup>"
         ),
         center={"lat": 51.2, "lon": 4.3},
-        zoom=8,
+        zoom=7,
         # height=820,
         mapbox_style="open-street-map"
     )
@@ -533,7 +533,7 @@ def beekeepers_heatmap() -> None:
             "<sup>Bron: FAVV inter_actieve_actoren_NL.csv</sup>"
         ),
         center={"lat": 51.2, "lon": 4.3},
-        zoom=8,
+        zoom=7,
         # height=820,
         mapbox_style="open-street-map"
     )
