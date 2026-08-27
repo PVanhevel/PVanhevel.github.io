@@ -432,9 +432,9 @@ def write_heatmap(df: pd.DataFrame) -> None:
         mapbox_style="carto-positron",                                                              # REQUIRED in Plotly 6.x
     )
     fig.update_layout(
-        mapbox={
-            "accesstoken": os.environ["MAPBOX_TOKEN"]
-        }
+        mapbox=dict(
+            accesstoken=os.environ["MAPBOX_TOKEN"]
+        )
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
@@ -537,9 +537,9 @@ def beekeepers_heatmap() -> None:
         mapbox_style="carto-positron",                                                              # REQUIRED in Plotly 6.x
     )
     fig.update_layout(
-        mapbox={
-            "accesstoken": os.environ["MAPBOX_TOKEN"]
-        }
+        mapbox=dict(
+            accesstoken=os.environ["MAPBOX_TOKEN"]
+        )
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
