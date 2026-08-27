@@ -431,10 +431,9 @@ def write_heatmap(df: pd.DataFrame) -> None:
         # height=820,
     )
     fig.update_layout(
-        mapbox=dict(
-            accesstoken=os.environ["MAPBOX_TOKEN"],
-            style="carto-positron"
-        )
+        mapbox={
+            "accesstoken": os.environ["MAPBOX_TOKEN"]
+        }
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
@@ -536,10 +535,9 @@ def beekeepers_heatmap() -> None:
         # height=820,
     )
     fig.update_layout(
-        mapbox=dict(
-            accesstoken=os.environ["MAPBOX_TOKEN"],
-            style="carto-positron"
-        )
+        mapbox={
+            "accesstoken": os.environ["MAPBOX_TOKEN"]
+        }
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
