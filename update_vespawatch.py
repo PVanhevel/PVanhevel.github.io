@@ -8,7 +8,9 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import requests
 import plotly.express as px
-px.set_mapbox_access_token("pk.eyJ1IjoicHZhbmhldmVsIiwiYSI6ImNqZnZnanZjcjR3ZnEycXFmaTFycmx4MzAifQ.0jurH4Sa_VFi8RrbTL_bGA")
+import os
+# px.set_mapbox_access_token("pk.eyJ1IjoicHZhbmhldmVsIiwiYSI6ImNqZnZnanZjcjR3ZnEycXFmaTFycmx4MzAifQ.0jurH4Sa_VFi8RrbTL_bGA")
+px.set_mapbox_access_token(os.environ["MAPBOX_TOKEN"])
 
 QUERY_URL = (
     "https://gisservices.inbo.be/arcgis/rest/services/"
@@ -446,7 +448,13 @@ def write_heatmap(df: pd.DataFrame) -> None:
 
 
 def beekeepers_heatmap() -> None:
+    # Load municipalities and calculate area ONCE (Optimization)
     municipalities = load_municipalities()
+    # Selecteer alle kolommen die een datum/tijd bevatten en zet ze om naar tekst (string)
+    for col in municipalities.select_dtypes(include=["datetime", "datetimetz"]).columns:
+        municipalities[col] = municipalities[col].astype(str)
+
+    # Nu werkt het omzetten naar JSON zonder foutmeldingen
     geojson = json.loads(municipalities.to_json())
     df_plot = pd.read_csv("inter_actieve_actoren_NL.csv", encoding="ISO-8859-1")
     df_plot = df_plot[df_plot["PAP Omschrijving"] == "Imker - houden bijen"]
