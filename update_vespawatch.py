@@ -432,9 +432,10 @@ def write_heatmap(df: pd.DataFrame) -> None:
         mapbox_style="carto-positron"
     )
     fig.update_layout(
-        mapbox=dict(
-            accesstoken=os.environ["MAPBOX_TOKEN"]
-        )
+        mapbox={
+            "accesstoken": os.environ["MAPBOX_TOKEN"],
+            "style": "carto-positron"
+        }
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
@@ -466,6 +467,7 @@ def beekeepers_heatmap() -> None:
     geojson = json.loads(municipalities.to_json())
     df_plot = pd.read_csv("inter_actieve_actoren_NL.csv", encoding="ISO-8859-1")
     df_plot = df_plot[df_plot["PAP Omschrijving"] == "Imker - houden bijen"]
+    
     cols = [
         'OP Uniek Nr Id ',
         'LNO Uniek Nr ',
@@ -537,9 +539,10 @@ def beekeepers_heatmap() -> None:
         mapbox_style="carto-positron"
     )
     fig.update_layout(
-        mapbox=dict(
-            accesstoken=os.environ["MAPBOX_TOKEN"]
-        )
+        mapbox={
+            "accesstoken": os.environ["MAPBOX_TOKEN"],
+            "style": "carto-positron"
+        }
     )
     fig.update_layout(
         font=dict(family="Courier New, monospace", size=10, color="#696969"),
