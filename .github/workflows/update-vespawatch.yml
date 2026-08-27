@@ -15,6 +15,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Debug token
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          echo "Token length: ${#MAPBOX_TOKEN}"
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
