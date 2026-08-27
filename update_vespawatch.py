@@ -5,12 +5,14 @@ from pathlib import Path
 import numpy as np
 import geopandas as gpd
 import pandas as pd
+import os
 from sklearn.cluster import DBSCAN
 import requests
 import plotly.express as px
-import os
 # px.set_mapbox_access_token("pk.eyJ1IjoicHZhbmhldmVsIiwiYSI6ImNqZnZnanZjcjR3ZnEycXFmaTFycmx4MzAifQ.0jurH4Sa_VFi8RrbTL_bGA")
-px.set_mapbox_access_token(os.environ["MAPBOX_TOKEN"])
+import plotly.io as pio
+pio.set_mapbox_access_token(os.environ["MAPBOX_TOKEN"])
+
 
 QUERY_URL = (
     "https://gisservices.inbo.be/arcgis/rest/services/"
