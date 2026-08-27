@@ -2,7 +2,6 @@ name: Update VespaWatch report
 
 on:
   schedule:
-    # 05:00 UTC = 07:00 in Belgium during summer time.
     - cron: "0 5 * * *"
   workflow_dispatch:
 
@@ -14,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.x"
 
