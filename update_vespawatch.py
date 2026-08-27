@@ -423,7 +423,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
         },
         animation_frame="jaar",                                                                     # Creates the interactive year slider
         title=(
-            f"Waarnemingen van AH nesten per km² per gemeente in Vlaanderen  (geüpdate op {today:%Y-%m-%d %H:%M:%S%z})<br>"
+            f"Waarnemingen van AH nesten per km² per gemeente in Vlaanderen  (geüpdatet op {today:%Y-%m-%d %H:%M:%S%z})<br>"
             "<sup>alle waarnemingen (dus incl. de niet gedfeerde, de onzekere, de dubbele, de lege nesten, enz.</sup>"
         ),
         center={"lat": 51.2, "lon": 4.3},
@@ -530,7 +530,7 @@ def beekeepers_heatmap() -> None:
             "area_km2": "oppervlakte (km²)"
         },
         title=(
-            f"Aantal imkers per km² per gemeente in Vlaanderen  (geüpdate op {today:%Y-%m-%d %H:%M:%S%z})<br>"
+            f"Aantal imkers per km² per gemeente in Vlaanderen  (geüpdatet op {today:%Y-%m-%d %H:%M:%S%z})<br>"
             "<sup>Bron: FAVV inter_actieve_actoren_NL.csv</sup>"
         ),
         center={"lat": 51.2, "lon": 4.3},
