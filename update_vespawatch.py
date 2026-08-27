@@ -429,12 +429,12 @@ def write_heatmap(df: pd.DataFrame) -> None:
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
         # height=820,
-        mapbox_style="carto-positron"
+        mapbox_style="open-street-map"
     )
     fig.update_layout(
         mapbox={
             "accesstoken": os.environ["MAPBOX_TOKEN"],
-            "style": "carto-positron"
+            "style": "open-street-map"
         }
     )
     fig.update_layout(
@@ -536,12 +536,12 @@ def beekeepers_heatmap() -> None:
         center={"lat": 51.0, "lon": 4.5},
         zoom=8,
         # height=820,
-        mapbox_style="carto-positron"
+        mapbox_style="open-street-map"
     )
     fig.update_layout(
         mapbox={
             "accesstoken": os.environ["MAPBOX_TOKEN"],
-            "style": "carto-positron"
+            "style": "open-street-map"
         }
     )
     fig.update_layout(
