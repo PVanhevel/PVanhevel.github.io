@@ -279,31 +279,6 @@ def municipality_counts(df: pd.DataFrame, municipalities: gpd.GeoDataFrame) -> p
     return pd.concat([matched, spatial_counts]).groupby(level=0).sum()
 
 
-# def load_municipalities() -> gpd.GeoDataFrame:
-#     if not MUNICIPALITIES_CACHE.exists():
-#         params = {
-#             "where": "1=1",
-#             "outFields": "NAAM,NISCODE",
-#             "returnGeometry": "true",
-#             "outSR": "4326",
-#             "f": "geojson",
-#         }
-#         response = requests.get(MUNICIPALITIES_URL, params=params, timeout=120)
-#         response.raise_for_status()
-#         MUNICIPALITIES_CACHE.parent.mkdir(parents=True, exist_ok=True)
-#         MUNICIPALITIES_CACHE.write_text(response.text, encoding="utf-8")
-
-#     municipalities = gpd.read_file(MUNICIPALITIES_CACHE)
-#     municipalities["NAAM"] = municipalities["NAAM"].astype(str).str.strip()
-#     municipalities["NISCODE"] = municipalities["NISCODE"].astype(str).str.strip()
-
-#     # Reproject to Belgian Lambert 72 (EPSG:31370) for accurate area calculation
-#     municipalities_proj = municipalities.to_crs("EPSG:31370")
-#     municipalities["area_km2"] = municipalities_proj.geometry.area / 1_000_000
-
-#     municipalities["geometry"] = municipalities.geometry.simplify(0.001, preserve_topology=True)
-#     return municipalities
-
 def load_municipalities() -> gpd.GeoDataFrame:
     # Forceer herdownload als het bestand corrupt is of HTML-tags bevat van eerdere pogingen
     is_corrupted = False
@@ -424,7 +399,8 @@ def write_heatmap(df: pd.DataFrame) -> None:
         animation_frame="jaar",                                                                     # Creates the interactive year slider
         title=(
             f"Waarnemingen van AH nesten per km² per gemeente in Vlaanderen  (geüpdatet op {today:%Y-%m-%d %H:%M:%S%z})<br>"
-            "<sup>alle waarnemingen (dus incl. de niet gedfeerde, de onzekere, de dubbele, de lege nesten, enz.</sup>"
+            "<sup>Bron: INBO VespaWatch FeatureServer<br>"
+            "alle waarnemingen (dus incl. de niet gevalideerde, de onzekere, de dubbele, de lege nesten, enz.</sup>"
         ),
         center={"lat": 51.2, "lon": 4.3},
         zoom=7,
