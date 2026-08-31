@@ -59,7 +59,7 @@ SITE_NAV = (
 SITE_NAV_CHROME = (
     '<style>'
     'html,body{margin:0;background:#fff;color:#696969;'
-    'font-family:"Courier New",monospace;font-size:10px}'
+    'font-family:Verdana,sans-serif;font-size:10px}'
     '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6}'
     '.site-nav a{color:#447adb;text-decoration:none}'
     '.site-nav a:hover{text-decoration:underline}'
@@ -74,7 +74,7 @@ SITE_NAV_CHROME = (
 #     chrome = (
 #         '<style>'
 #         '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6;'
-#         'font-family:"Courier New",monospace;font-size:10px}'
+#         'font-family:Verdana,sans-serif;font-size:10px}'
 #         '.site-nav a{color:#58a6ff;text-decoration:none}'
 #         '.site-nav a:hover{text-decoration:underline}'
 #         '</style>'
@@ -414,7 +414,7 @@ def write_heatmap(df: pd.DataFrame) -> None:
         }
     )
     fig.update_layout(
-        font=dict(family="Courier New, monospace", size=10, color="#696969"),
+        font=dict(family="Verdana, sans-serif", size=10, color="#696969"),
         title_x=0.5,
         margin={"r": 0, "t": 70, "l": 0, "b": 0},
         coloraxis_colorbar={"title": "waarnemingen / km²"},
@@ -521,7 +521,7 @@ def beekeepers_heatmap() -> None:
         }
     )
     fig.update_layout(
-        font=dict(family="Courier New, monospace", size=10, color="#696969"),
+        font=dict(family="Verdana, sans-serif", size=10, color="#696969"),
         title_x=0.5,
         margin={"r": 0, "t": 70, "l": 0, "b": 0},
         coloraxis_colorbar={"title": "imkers / km²"},
