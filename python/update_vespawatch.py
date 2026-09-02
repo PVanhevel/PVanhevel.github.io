@@ -41,7 +41,7 @@ RESULTS = [
     'niet_succesvol_bestreden',
     'ongekend',
 ]
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent  # repo root (this script now lives in python/)
 # MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
 MUNICIPALITIES_CACHE = ROOT / "data" / "belgische_gemeenten_vlaanderen.geojson"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
@@ -442,7 +442,7 @@ def beekeepers_heatmap() -> None:
 
     # Nu werkt het omzetten naar JSON zonder foutmeldingen
     geojson = json.loads(municipalities.to_json())
-    df_plot = pd.read_csv("inter_actieve_actoren_NL.csv", encoding="ISO-8859-1")
+    df_plot = pd.read_csv(ROOT / "data" / "inter_actieve_actoren_NL.csv", encoding="ISO-8859-1")
     df_plot = df_plot[df_plot["PAP Omschrijving"] == "Imker - houden bijen"]
     cols = [
         'OP Uniek Nr Id ',
