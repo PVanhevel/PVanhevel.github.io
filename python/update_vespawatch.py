@@ -41,49 +41,15 @@ RESULTS = [
     'niet_succesvol_bestreden',
     'ongekend',
 ]
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 # MUNICIPALITIES_CACHE = ROOT / "data" / "gemeentegrenzen.geojson"
 MUNICIPALITIES_CACHE = ROOT / "data" / "belgische_gemeenten_vlaanderen.geojson"
+FAVV_CSV = ROOT / "data" / "inter_actieve_actoren_NL.csv"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
 HEATMAP_TEMPLATE_HTML = ROOT / "heatmap_template.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
 HEATMAP1_HTML = ROOT / "heatmap_beekeepers.html"
 HEATMAP1_TEMPLATE_HTML = ROOT / "heatmap1_template.html"
-# SITE_NAV = (
-#     '<a href="index.html">Hive weight</a> | '
-#     '<a href="asian_hornet_observations.html">AH observations near Hofstade</a> | '
-#     '<a href="analysis_vespawatch.html">AH observations tables</a> | '
-#     '<a href="heatmap_vespawatch.html">AH observations heatmap</a> | '
-#     '<a href="heatmap_beekeepers.html">Beekeepers heatmap</a>'
-# )
-# SITE_NAV_CHROME = (
-#     '<style>'
-#     'html,body{margin:0;background:#fff;color:#696969;'
-#     'font-family:Verdana,sans-serif;font-size:10px}'
-#     '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6}'
-#     '.site-nav a{color:#447adb;text-decoration:none}'
-#     '.site-nav a:hover{text-decoration:underline}'
-#     '</style>'
-#     f'<nav class="site-nav">{SITE_NAV}</nav>'
-# )
-
-
-# def _with_site_nav(html: str, dark: bool = False) -> str:
-#     if 'class="site-nav"' in html:
-#         return html
-#     chrome = (
-#         '<style>'
-#         '.site-nav{text-align:center;padding:8px 12px 12px;line-height:1.6;'
-#         'font-family:Verdana,sans-serif;font-size:10px}'
-#         '.site-nav a{color:#58a6ff;text-decoration:none}'
-#         '.site-nav a:hover{text-decoration:underline}'
-#         '</style>'
-#         f'<nav class="site-nav">{SITE_NAV}</nav>'
-#         if dark else SITE_NAV_CHROME
-#     )
-#     if "</body>" in html:
-#         return html.replace("</body>", chrome + "</body>", 1)
-#     return html + chrome
 
 
 def fetch() -> pd.DataFrame:
@@ -442,7 +408,7 @@ def beekeepers_heatmap() -> None:
 
     # Nu werkt het omzetten naar JSON zonder foutmeldingen
     geojson = json.loads(municipalities.to_json())
-    df_plot = pd.read_csv("inter_actieve_actoren_NL.csv", encoding="ISO-8859-1")
+    df_plot = pd.read_csv(FAVV_CSV, encoding="ISO-8859-1")
     df_plot = df_plot[df_plot["PAP Omschrijving"] == "Imker - houden bijen"]
     cols = [
         'OP Uniek Nr Id ',
