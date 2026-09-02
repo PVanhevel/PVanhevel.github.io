@@ -354,7 +354,7 @@ def find_clusters():
 
 
 def main() -> None:
-    output_dir = Path(__file__).parent
+    output_dir = Path(__file__).resolve().parent.parent  # repo root (this script now lives in python/)
     df = gisservices_inbo()
     (
         observations_by_result,

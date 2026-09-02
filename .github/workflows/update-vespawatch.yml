@@ -32,7 +32,7 @@ jobs:
       - name: Refresh VespaWatch report
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
-        run: python update_vespawatch.py
+        run: python python/update_vespawatch.py
 
       - name: Commit updated report
         run: |
