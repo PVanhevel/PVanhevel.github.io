@@ -46,10 +46,10 @@ ROOT = Path(__file__).resolve().parent.parent
 MUNICIPALITIES_CACHE = ROOT / "data" / "belgische_gemeenten_vlaanderen.geojson"
 FAVV_CSV = ROOT / "data" / "inter_actieve_actoren_NL.csv"
 HEATMAP_HTML = ROOT / "heatmap_vespawatch.html"
-HEATMAP_TEMPLATE_HTML = ROOT / "heatmap_template.html"
+HEATMAP_TEMPLATE_HTML = ROOT / "templates" / "heatmap_template.html"
 ANALYSIS_HTML = ROOT / "analysis_vespawatch.html"
 HEATMAP1_HTML = ROOT / "heatmap_beekeepers.html"
-HEATMAP1_TEMPLATE_HTML = ROOT / "heatmap1_template.html"
+HEATMAP1_TEMPLATE_HTML = ROOT / "templates" / "heatmap1_template.html"
 
 
 def fetch() -> pd.DataFrame:
